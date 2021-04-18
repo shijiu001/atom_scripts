@@ -1,0 +1,113 @@
+# 下载数据
+echo "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR150/008/SRR1506058/SRR1506058.fastq.gz
+ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR150/004/SRR1506054/SRR1506054.fastq.gz
+ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR150/003/SRR1506053/SRR1506053.fastq.gz
+ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR150/007/SRR1506057/SRR1506057.fastq.gz" > url.txt
+
+nohup wget -i url.txt &
+
+
+# 回贴
+nohup hisat2 -p 8 -x RefData/mm10_tran -U data/SRR1506057.fastq -S SCNT_2C_rep1.sam &
+nohup hisat2 -p 8 -x RefData/mm10_tran -U data/SRR1506058.fastq -S SCNT_2C_rep2.sam &
+nohup hisat2 -p 8 -x RefData/mm10_tran -U data/SRR1506053.fastq -S IVF_2C_rep1.sam &
+nohup hisat2 -p 8 -x RefData/mm10_tran -U data/SRR1506054.fastq -S IVF_2C_rep2.sam &
+
+
+# 对sam文件排序并转换成bam文件
+nohup sh -c 'for i in *; do i=${i%.sam*}; samtools sort -@ 8 -o ${i}.bam ${i}.sam; done' &
+
+
+# 组装产生gtf文件
+nohup sh -c 'for i in *.bam; do i=${i%.bam*}; stringtie -p 8 -G /home2/qzfu_2/RefData/mm10.gtf -o ${i}.gtf -l ${i} ${i}.bam;done' &
+nohup stringtie --merge -p 8 -G /home2/qzfu_2/RefData/mm10.gtf -o stringtie_merged.gtf mergelist.txt &	#maergelist.txt需要自己写
+
+nohup sh -c 'for i in *.bam;do i=${i%.bam*}; stringtie -e -B -p 8 -G /home2/qzfu_2/RefData/stringtie_merged.gtf -o ../ballgown/${i}/${i}.gtf ${i}.bam;done' &	#-B参数意味着产生能够用于Ballgown输入的数据
+
+
+#写一个描述性的文件，描述样本
+vim pheno.csv
+
+#featureCounts
+nohup featureCounts -T 8 -t exon -g gene_id -a /home2/qzfu_2/RefData/mm10.gtf -o AllSampleCounts.txt *.bam &
+
+
+
+
+
+
+
+# 接下来转入R studio
+
+#设置工作路径
+setwd("/home2/qzfu_2/MidData/")
+
+
+#读入数据
+pheno_data = read.csv("pheno.csv")
+
+
+
+#Ballgown
+#读入数据并筛选
+bg_2C = ballgown(dataDir = "ballgown", samplePattern = "2C_", pData=pheno_data)
+bg_2C_filt = subset(bg_2C,"rowVars(texpr(bg_2C)) >1",genomesubset=TRUE)
+
+results_transcripts = stattest(bg_2C_filt, feature="transcript",covariate="method", getFC=TRUE, meas="FPKM")
+results_gene = stattest(bg_2C_filt, feature="gene",covariate="method", getFC=TRUE, meas="FPKM")
+results_transcripts = data.frame(geneNames=ballgown::geneNames(bg_2C_filt), geneIDs=ballgown::geneIDs(bg_2C_filt), results_transcripts)
+results_gene = data.frame(geneNames=ballgown::geneNames(bg_2C_filt), geneIDs=ballgown::geneIDs(bg_2C_filt), results_gene)
+
+
+
+#featureCounts
+#读入数据
+setwd("/home2/qzfu_2/MidData/featurecounts")
+data <- read.table("AllSampleCounts.txt", header=TRUE, quote="\t", skip=1)
+
+SampleNames <- pheno_data[,1]
+SampleNames <- as.character(SampleNames)
+names(data)[7:10]<- SampleNames
+
+countData <- as.matrix(data[7:10])
+rownames(countData) <- data$Geneid
+
+
+#DESeq2
+#构建dds矩阵
+dds <- DESeqDataSetFromMatrix(countData, colData=pheno_data, design= ~ method)
+
+#执行DESeq
+dds <- DESeq(dds)
+res <- results(dds)
+resdata <- merge(as.data.frame(res), as.data.frame(counts(dds, normalized=TRUE)),by="row.names",sort=FALSE)
+
+#筛选数据
+resdata <- na.omit(resdata)
+
+resdata_up <- resdata[which(resdata$log2FoldChange >2 & resdata$padj < 0.05),]
+resdata_down <- resdata[which(resdata$log2FoldChange < -2 & resdata$padj <0.05),]
+resdata_filter <- rbind(resdata_up, resdata_down)
+
+#取对数（log2）
+resdata_filter[,8:11] <- log2(resdata_filter[,8:11]+1)
+
+pheatmap(resdata_filter[,8:11],cluster_cols = FALSE, cluster_rows = FALSE)
+
+#用scale中心化
+diff_scaled <- cbind(resdata_filter[,1:7] , t(scale(t(resdata_filter[,8:11]))))
+
+pheatmap(diff_scaled[,8:11] , cluster_rows = F , cluster_cols = F)
+
+
+
+
+#clusterprofiler
+#ID转换，把gene_symbol转换成ENTREZID
+library(org.Mm.eg.db)
+diffgeneID <- bitr(diff_scaled[,1],fromType = "SYMBOL",toType = "ENTREZID",OrgDb = "org.Mm.eg.db",drop = T)
+
+#富集分析
+result_go <- enrichGO(diffgeneID$ENTREZID,OrgDb = "org.Mm.eg.db",keyType = "ENTREZID",ont = "ALL",readable = T)
+barplot(result_go,showCategory=20)
+dotplot(result_go,showCategory=20)
