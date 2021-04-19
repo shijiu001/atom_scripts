@@ -1,0 +1,35 @@
+# 下载 安装 检查安装
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+conda --version
+
+# 配置conda
+vim .bashrc
+```
+# >>> conda initialize >>>           #添加PATH
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/home1/chenjiayu/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/home1/chenjiayu/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/home1/chenjiayu/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/home1/chenjiayu/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+```
+source ~/.bashrc
+
+
+vim .condarc
+```
+channels:                #镜像channel
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ # Anocanda清华镜像
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+```
