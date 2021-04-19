@@ -1,0 +1,16 @@
+# 下载vcf文件
+wget ftp://ftp-mouse.sanger.ac.uk/REL-1505-SNPs_Indels/mgp.v5.merged.snps_all.dbSNP142.vcf.gz
+md5sum mgp.v5.merged.snps_all.dbSNP142.vcf.gz      # md5检查
+
+# 建立一个N-masked的参考基因组
+SNPsplit_genome_preparation --vcf_file CAST_EiJ.mgp.v5.snps.dbSNP142.vcf.gz --reference_genome ../fasta/ --strain CAST_EiJ --nmasking
+cat *.fa > mm10_N-masked.fa
+
+# N-masked的bowtie2 index
+bowtie2-build mm10_N-masked.fa mm10_CASTEiJ_N-masked
+
+# 利用N-masked的index做mapping
+bowtie2 -p 8 -x ~/ref/snp_mouse/CAST_EiJ/CAST_EiJ_N-masked/bowtie2_index/mm10_CASTEiJ_N-masked -U ./sra/SRR805449.fastq.gz -S zy1.sam
+
+# 利用snp_file区分品系
+SNPsplit --snp_file ~/ref/snp_mouse/CAST_EiJ/SNPs_CAST_EiJ/CASTEiJ_SNP.txt zy1.sam
