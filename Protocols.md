@@ -60,6 +60,6 @@ http://bioconductor.org/packages/release/bioc/manuals/ballgown/man/ballgown.pdf*
 
 ### SNPsplit
 
-**Manual:https://github.com/FelixKrueger/SNPsplit/blob/master/SNPsplit_User_Guide.md**
+**Manual: https://github.com/FelixKrueger/SNPsplit/blob/master/SNPsplit_User_Guide.md**
 
 ---
