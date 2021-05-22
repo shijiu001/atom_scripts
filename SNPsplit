@@ -14,3 +14,22 @@ bowtie2 -p 8 -x ~/ref/snp_mouse/CAST_EiJ/CAST_EiJ_N-masked/bowtie2_index/mm10_CA
 
 # 利用snp_file区分品系
 SNPsplit --snp_file ~/ref/snp_mouse/CAST_EiJ/SNPs_CAST_EiJ/CASTEiJ_SNP.txt zy1.sam
+
+
+
+
+PhrenoVermouth:
+SNPsplit_genome_preparation --vcf_file mgp.v5.merged.snps_all.dbSNP142_trans.vcf --strain 129S1_SvImJ --reference_genome mm10_fa --genome_build mm10
+
+cd 129S1_SvImJ_N-masked
+
+for i in *chrchr*
+do
+j=${i/chrchr/chr}
+mv $i $j
+done
+
+cat *fa > 129S1_Sv.N-masked.fa
+
+石九:
+啊，这我没想到的
