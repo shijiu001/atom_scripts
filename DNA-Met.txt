@@ -1,0 +1,36 @@
+# mkdir $1
+cd $1
+# trim_galore --phred33 --paired ../../../Data/methylation/$1.1.fq ../../../Data/methylation/$1.2.fq
+# mkdir single-end
+cd single-end
+# cat ../$1.1_val_1.fq ../$1.2_val_2.fq > $1_val_merged.fq
+
+# bsmap -a $1_val_merged.fq -d /mnt/Storage/data/BWA/hg38.fa -v 0.1 -m 32 -x 1000 -R -o $1.bsmap.sam
+# bsmap -a $1_val_merged.fq -d $HOME/annotations/Enterobacteria_phage_lambda.fa -v 0.1 -m 28 -x 1000 -R -o $1.lambda.sam
+mcall -m $1.lambda.sam -p 4 -r $HOME/annotations/Enterobacteria_phage_lambda.fa --outputDir $1
+mcall -m $1.bsmap.sam -p 4 -r /mnt/Storage/data/BWA/hg38.fa --outputDir $1
+samtools flagstat $1.bsmap.sam > $1.bsmap.mappingrates.sam.txt
+
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-1/single-end/cc-1.lambda.sam.G.bed cc-3/single-end/cc-3.lambda.sam.G.bed gl-1/single-end/gl-1.lambda.sam.G.bed gl-2/single-end/gl-2.lambda.sam.G.bed
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-1/single-end/cc-1.bsmap.sam.G.bed cc-3/single-end/cc-3.bsmap.sam.G.bed gl-1/single-end/gl-1.bsmap.sam.G.bed gl-2/single-end/gl-2.bsmap.sam.G.bed
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-1/single-end/cc-1.bsmap.CpG.txt cc-3/single-end/cc-3.bsmap.CpG.txt gl-1/single-end/gl-1.bsmap.CpG.txt gl-2/single-end/gl-2.bsmap.CpG.txt
+
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-P3-2/single-end/cc-P3-2.lambda.sam.G.bed cc-P5-1/single-end/cc-P5-1.lambda.sam.G.bed gl-P4-1/single-end/gl-P4-1.lambda.sam.G.bed gl-N1-2/single-end/gl-N1-2.lambda.sam.G.bed gl-P1-1_20G/single-end/gl-P1-1_20G.lambda.sam.G.bed gl-P1-2_20G/single-end/gl-P1-2_20G.lambda.sam.G.bed cc-P1-1_20G/single-end/cc-P1-1_20G.lambda.sam.G.bed cc-P1-2_20G/single-end/cc-P1-2_20G.lambda.sam.G.bed cc-P1-3_20G/single-end/cc-P1-3_20G.lambda.sam.G.bed GV-P1-1_20G/single-end/GV-P1-1_20G.lambda.sam.G.bed GV-P1-2_20G/single-end/GV-P1-2_20G.lambda.sam.G.bed gl-P2-1_20G/single-end/gl-P2-1_20G.lambda.sam.G.bed gl-P2-2_20G/single-end/gl-P2-2_20G.lambda.sam.G.bed gl-P2-3_20G/single-end/gl-P2-3_20G.lambda.sam.G.bed cc-P2-1_20G/single-end/cc-P2-1_20G.lambda.sam.G.bed cc-P2-2_20G/single-end/cc-P2-2_20G.lambda.sam.G.bed cc-P2-3_20G/single-end/cc-P2-3_20G.lambda.sam.G.bed GV-P2-1_20G/single-end/GV-P2-1_20G.lambda.sam.G.bed GV-P2-2_20G/single-end/GV-P2-2_20G.lambda.sam.G.bed TE-P-Mix-1_20G/single-end/TE-P-Mix-1_20G.lambda.sam.G.bed TE-P-Mix-2_20G/single-end/TE-P-Mix-2_20G.lambda.sam.G.bed TE-P-Mix-3_20G/single-end/TE-P-Mix-3_20G.lambda.sam.G.bed ICM-P-Mix-1_20G/single-end/ICM-P-Mix-1_20G.lambda.sam.G.bed ICM-P-Mix-2_20G/single-end/ICM-P-Mix-2_20G.lambda.sam.G.bed ICM-P-Mix-3_20G/single-end/ICM-P-Mix-3_20G.lambda.sam.G.bed
+# no gl-N1-2
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-P3-2/single-end/cc-P3-2.bsmap.sam.G.bed cc-P5-1/single-end/cc-P5-1.bsmap.sam.G.bed gl-P4-1/single-end/gl-P4-1.bsmap.sam.G.bed gl-P1-1_20G/single-end/gl-P1-1_20G.bsmap.sam.G.bed gl-P1-2_20G/single-end/gl-P1-2_20G.bsmap.sam.G.bed cc-P1-1_20G/single-end/cc-P1-1_20G.bsmap.sam.G.bed cc-P1-2_20G/single-end/cc-P1-2_20G.bsmap.sam.G.bed cc-P1-3_20G/single-end/cc-P1-3_20G.bsmap.sam.G.bed GV-P1-1_20G/single-end/GV-P1-1_20G.bsmap.sam.G.bed GV-P1-2_20G/single-end/GV-P1-2_20G.bsmap.sam.G.bed gl-P2-1_20G/single-end/gl-P2-1_20G.bsmap.sam.G.bed gl-P2-2_20G/single-end/gl-P2-2_20G.bsmap.sam.G.bed gl-P2-3_20G/single-end/gl-P2-3_20G.bsmap.sam.G.bed cc-P2-1_20G/single-end/cc-P2-1_20G.bsmap.sam.G.bed cc-P2-2_20G/single-end/cc-P2-2_20G.bsmap.sam.G.bed cc-P2-3_20G/single-end/cc-P2-3_20G.bsmap.sam.G.bed GV-P2-1_20G/single-end/GV-P2-1_20G.bsmap.sam.G.bed GV-P2-2_20G/single-end/GV-P2-2_20G.bsmap.sam.G.bed TE-P-Mix-1_20G/single-end/TE-P-Mix-1_20G.bsmap.sam.G.bed TE-P-Mix-2_20G/single-end/TE-P-Mix-2_20G.bsmap.sam.G.bed TE-P-Mix-3_20G/single-end/TE-P-Mix-3_20G.bsmap.sam.G.bed ICM-P-Mix-1_20G/single-end/ICM-P-Mix-1_20G.bsmap.sam.G.bed ICM-P-Mix-2_20G/single-end/ICM-P-Mix-2_20G.bsmap.sam.G.bed ICM-P-Mix-3_20G/single-end/ICM-P-Mix-3_20G.bsmap.sam.G.bed
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-P3-2/single-end/cc-P3-2.bsmap.CpG.txt cc-P5-1/single-end/cc-P5-1.bsmap.CpG.txt gl-P4-1/single-end/gl-P4-1.bsmap.CpG.txt gl-P1-1_20G/single-end/gl-P1-1_20G.bsmap.CpG.txt gl-P1-2_20G/single-end/gl-P1-2_20G.bsmap.CpG.txt cc-P1-1_20G/single-end/cc-P1-1_20G.bsmap.CpG.txt cc-P1-2_20G/single-end/cc-P1-2_20G.bsmap.CpG.txt cc-P1-3_20G/single-end/cc-P1-3_20G.bsmap.CpG.txt GV-P1-1_20G/single-end/GV-P1-1_20G.bsmap.CpG.txt GV-P1-2_20G/single-end/GV-P1-2_20G.bsmap.CpG.txt gl-P2-1_20G/single-end/gl-P2-1_20G.bsmap.sam.G.bed gl-P2-2_20G/single-end/gl-P2-2_20G.bsmap.CpG.txt gl-P2-3_20G/single-end/gl-P2-3_20G.bsmap.sam.G.bed cc-P2-1_20G/single-end/cc-P2-1_20G.bsmap.CpG.txt cc-P2-2_20G/single-end/cc-P2-2_20G.bsmap.sam.G.bed cc-P2-3_20G/single-end/cc-P2-3_20G.bsmap.CpG.txt GV-P2-1_20G/single-end/GV-P2-1_20G.bsmap.CpG.txt GV-P2-2_20G/single-end/GV-P2-2_20G.bsmap.CpG.txt TE-P-Mix-1_20G/single-end/TE-P-Mix-1_20G.bsmap.CpG.txt TE-P-Mix-2_20G/single-end/TE-P-Mix-2_20G.bsmap.CpG.txt TE-P-Mix-3_20G/single-end/TE-P-Mix-3_20G.bsmap.CpG.txt ICM-P-Mix-1_20G/single-end/ICM-P-Mix-1_20G.bsmap.CpG.txt ICM-P-Mix-2_20G/single-end/ICM-P-Mix-2_20G.bsmap.CpG.txt ICM-P-Mix-2_20G/single-end/ICM-P-Mix-2_20G.bsmap.CpG.txt ICM-P-Mix-3_20G/single-end/ICM-P-Mix-3_20G.bsmap.CpG.txt
+
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py *-*/single-end/*lambda*.sam.G.bed &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py *-*/single-end/*bsmap*.sam.G.bed &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py *-*/single-end/*.bsmap.CpG.txt &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py  &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py  &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py  &
+
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py *-*/single-end/*.bsmap.CpG.txt public/GSE81233/ICM_normal_pub/*.bsmap.CpG.txt public/GSE81233/TE_normal_pub/*.bsmap.CpG.txt &
+
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py *-*/single-end/*lambda*.G.bed &
+# python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py cc-N3-2_20G/single-end/*bsmap*.G.bed GV-P6-1/single-end/*bsmap*.G.bed gl-P6-1/single-end/*bsmap*.G.bed 8cell-P-Mix-1/single-end/*bsmap*.G.bed cc-N3-1/single-end/*bsmap*.G.bed GV-N2-1/single-end/*bsmap*.G.bed gl-N2-1/single-end/*bsmap*.G.bed cc-N2-2/single-end/*bsmap*.G.bed &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py *-*/single-end/*.bsmap.CpG.txt public/GSE81233/ICM_normal_pub/*.bsmap.CpG.txt public/GSE81233/TE_normal_pub/*.bsmap.CpG.txt &
+# nohup python2.7 ~/PCOS/Processed/methylation/methyl_processing_Pipe.py &
