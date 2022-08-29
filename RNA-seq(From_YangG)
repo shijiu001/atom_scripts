@@ -1,0 +1,94 @@
+Fastqc
+
+wd=~/work_space/4.ProjectET/batch17_rna/1.rawdata
+cd $wd
+mkdir fastqc
+for i in *fastq.gz ;do
+nohup fastqc $i -o ./fastqc &
+done
+
+multiqc -n "batch17_rna_raw" ./ &
+
+Cutadapt
+
+conda activate py36
+wd=~/work_space/4.ProjectET/batch17_rna/1.rawdata
+nwd=~/work_space/4.ProjectET/batch17_rna/2.cutdata
+mkdir $nwd
+cd $wd
+for i in *_1.fastq.gz
+do
+t=${i/_1/_2}
+echo $i
+echo $t
+nohup cutadapt -j 3 -a AGATCGGAAGAGC  -A AGATCGGAAGAGC --trim-n -m 80 -q 20,20 -o $nwd/${i%.fastq*}_cut.fq -p $nwd/${t%.fastq*}_cut.fq $i $t > $nwd/${i%%.*}_cut.log &
+done
+
+
+
+wd=/home1/gyang/work_space/Public_data/7.zhangyi_nt_rna/2.cutdata
+cd $wd
+mkdir fastqc
+for i in *fq ;do nohup fastqc $i -o ./fastqc & done
+
+
+3. align
+wd=~/work_space/4.ProjectET/batch17_rna/2.cutdata
+nwd=~/work_space/4.ProjectET/batch17_rna/3.align
+mkdir $nwd
+cd $wd
+for i in *_1_cut.fq
+do
+echo $i
+t=${i/_1_cut.fq/_2_cut.fq}
+echo $t
+nohup hisat2 -p 8 --dta-cufflinks --no-discordant  -t -x /home1/share/hisat2_index/mm10/genome -1 $i -2 $t -S $nwd/${i%%.*}.sam  > $nwd/${i%%.*}.log &
+echo ${i%%.*}.sam
+done
+
+
+4.sam2bam
+wd=~/work_space/4.ProjectET/batch17_rna/3.align
+cd $wd
+mkdir flagstat
+for i in *.sam
+do
+echo $i
+nohup samtools flagstat -@ 1 $i > ./flagstat/${i/.sam/.flagstat} &
+done
+
+for i in *sam
+do
+nohup samtools sort -@ 2 -o ${i%.*}.sorted.bam $i &
+done
+
+
+wd=~/work_space/4.ProjectET/batch17_rna/3.align
+nwd=~/work_space/4.ProjectET/batch17_rna/4.proper
+mkdir $nwd
+cd $wd
+for i in *sorted.bam
+do
+nohup samtools view -bf 0x2 -q 20 -@ 4 $i -o $nwd/${i%sort*}proper.bam  &
+done
+
+4.1 merge rep
+wd=~/work_space/1.Mouse_Acetylation/batch22/4.proper
+cd $wd
+for i in *-1.proper.bam
+do
+echo ${i%-*}
+j=${i%-*}
+nohup samtools merge ${j}_merge.bam `ls *$j*` -@ 5 &
+done
+
+5.stringtie
+
+wd=~/work_space/4.ProjectET/batch17_rna/4.proper
+nwd=~/work_space/4.ProjectET/batch17_rna/5.stringtie
+cd $wd
+for i in *proper.bam; do
+   outfolder=${i%.proper*}
+   mkdir -p $nwd/$outfolder
+   nohup stringtie -p 8 $i -b $nwd/$outfolder -e -G /home1/share/gtf/mm10.gtf -o $nwd/$outfolder/$outfolder_stringtie.gtf > $nwd/$outfolder.log &
+done
