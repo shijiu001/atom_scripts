@@ -1,0 +1,22 @@
+# Procession in Shell
+
+for i in *sorted.bam
+do echo $i
+t=${i/sorted.bam/TE}
+echo $t
+TEcount --sortByPos --format BAM --mode multi -b $i --GTF /home1/share/gtf/mm10.gtf --TE ~/ref/gtf/mm10_rmsk_TE.gtf --project $t &
+done
+
+
+# Procession in R
+
+setwd("~/project/20211109totalRNA-seqdata/morula/TEcount")
+
+file_names <- list.files()
+TEcounts <- read.table(file = file_names[1], col.names = file_names[1])
+for(i in 2:length(file_names)){
+  newdata <- read.table(file = file_names[i], col.names = file_names[i])
+  if (rownames(TEcounts) == rownames(newdata)){TEcounts <- cbind(TEcounts,newdata)}
+}
+
+remove(file_names,i,newdata)

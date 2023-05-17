@@ -18,3 +18,9 @@ cat SRR_Acc_List.txt |  while read i
  done
 
 # SRR_Acc_List.txt中写明了需要下载的SRR标号，每行写一个。
+
+
+
+cat SRR_Acc_List.txt | while read i || [[ -n $i ]]; do echo $i; grep $i filereport*.txt | cut -f 4 | cut -d ';' -f 1 >> ascp.txt;grep $i filereport*.txt | cut -f 4 | cut -d ';' -f 2 >> ascp.txt; done
+
+cat ascp.txt | while read i || [[ -n $i ]]; do echo era-fasp@$i; ascp -QT -l 300m -P 33001 -i ~/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@$i ./; done

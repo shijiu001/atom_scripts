@@ -1,0 +1,64 @@
+find ./ -name FQZ*gz | xargs -I {} mv {} ./
+
+mkdir fastqc
+for i in *gz; do nohup fastqc $i -o ./fastqc & done
+
+for i in *1.fq.gz; do  t=${i/1.fq.gz/2.fq.gz};   echo $i $t; nohup trim_galore --quality 30 --stringency 3 --length 50 --clip_R1 7 --clip_R2 6 --paired --trim1 --phred33 --gzip --output_dir ../cutdata $i $t & done
+
+for i in *1.fq.gz; do
+  t=${i/1.fq.gz/2.fq.gz}
+  echo $i $t
+  trim_galore --quality 20 --stringency 3 --length 50 --clip_R1 6 --clip_R2 6 --paired --trim1 --phred33 --gzip --output_dir ../cutdata $i $t
+done
+
+
+for i in *1_val_1.fq.gz; do t=${i/1_val_1.fq.gz/2_val_2.fq.gz}; nohup bismark --genome ~/ref/bismark_index/mm10/ -1 $i -2 $t &done
+
+for i in FQZ-1A*bam; do nohup deduplicate_bismark --bam $i & done
+
+bismark_methylation_extractor -gzip --bedGraph --CX FQZ-1A_10_1_val_1_bismark_bt2_pe.deduplication_report.txt
+
+coverage2cytosine --nome-seq --genome_folder ~/ref/genome_fasta/mm10/ -o NOMEtest FQZ-1A_10_1_val_1_bismark_bt2_pe.deduplicated.bismark.cov.gz
+
+
+
+for i in *summary.txt; do echo -n ${i%%.*}; echo -ne '\t'; grep '[AT]C[AT]' $i | awk '{sum1 += $4}; {sum2 += $5}; {t = sum2/(sum1+sum2)}; END {print t}'; done
+
+for i in *bam; do nohup samtools sort -@ 5 -o sorted/${i%_val_[12]_*}.sorted.bam $i & done
+nohup samtools merge NT.merged.bam *sorted.bam
+
+nohup deduplicate_bismark --bam NT.merged.bam &
+
+
+nohup bismark_methylation_extractor -gzip --bedGraph --CX IVF.merged.deduplicated.bam &
+
+nohup coverage2cytosine --nome-seq --genome_folder ~/ref/genome_fasta/mm10/ -o NT NT.merged.deduplicated.bismark.cov.gz &
+
+
+awk '{sum += $4} END{print sum/NR}' FQZ-1C_10.NOMe.GpC.cov
+
+bedtools intersect -a ../../mm10.200bp.bed -b NT.NOMe.GpC.cov -wa -wb > NT.GpC.cov.200bp.bed
+
+bedtools groupby -i NT.GpC.cov.200bp.bed -g 1,2,3 -c 7 -o count,mean > NT-farr.GpC.cov.200bp.average.bed
+
+awk '$4 >= 4 {print}' NT-farr.GpC.cov.200bp.average.bed > NT-farr.GpC.cov.200bp.average.count4.bed
+
+awk '$5 >= 70 {print}' NT-farr.GpC.cov.200bp.average.count4.bed > NT-farr.GpC.cov.200bp.average70.count4.bed
+awk '$5 <= 15 {print}' IVF.GpC.cov.200bp.average.count4.bed > IVF.GpC.cov.200bp.average15.count4.bed
+
+
+bedtools merge -i IVF.GpC.cov.200bp.average70.count4.bed > IVF.GpC.cov.200bp.average70.count4.merge.bed
+bedtools merge -i IVF.GpC.cov.200bp.average.count4.bed > IVF.GpC.cov.200bp.count4.merge.bed
+awk 'NR==FNR{sum1 += $3-$2} NR>FNR{sum2 += $3-$2} END{print sum1/sum2}' IVF.GpC.cov.200bp.average70.count4.merge.bed IVF.GpC.cov.200bp.count4.merge.bed
+
+bedtools intersect -a ~/project/NT/2C/ref_publised_data/RRR_region/whole_rrr_class_mm10_lftover_tran.bed -b IVF.NOMe.GpC.cov -wa -wb > IVF.GpC.RRR.bed
+bedtools groupby -i IVF.GpC.RRR.bed -g 1,2,3,4 -c 8 -o count,mean > IVF.GpC.RRR.average.bed
+
+
+
+
+
+
+
+
+# 以下认真整理

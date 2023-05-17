@@ -63,3 +63,9 @@ http://bioconductor.org/packages/release/bioc/manuals/ballgown/man/ballgown.pdf*
 **Manual: https://github.com/FelixKrueger/SNPsplit/blob/master/SNPsplit_User_Guide.md**
 
 ---
+
+### SQuIRE
+
+**Manual: https://github.com/wyang17/SQuIRE
+
+---

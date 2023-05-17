@@ -31,7 +31,7 @@ vim pheno.csv
 #featureCounts
 nohup featureCounts -T 8 -t exon -g gene_id -a /home2/qzfu_2/RefData/mm10.gtf -o AllSampleCounts.txt *.bam &
 
-
+nohup featureCounts -T 8 -p -t exon -g gene_id -a /home1/share/gtf/mm10.gtf -o morulaCounts.txt *.bam &
 
 
 
