@@ -8,11 +8,11 @@ conda activate chip
 wd=~/project/DUX/batch1_CUTandTAG/1.rawdata
 cd $wd
 mkdir fastqc
-for i in *fa.gz; do
+for i in *fastq.gz; do
 nohup fastqc $i -o ./fastqc &
 done
 
-multiqc -n 'batch1_CUTandTAG_raw' ./fastqc &
+multiqc -n 'batch1_H3K9me3_CUTandTAG_raw' ./fastqc &
 ```
 
 ### 2. cutadapt
@@ -21,16 +21,28 @@ wd=~/project/DUX/batch1_CUTandTAG/1.rawdata
 nwd=~/project/DUX/batch1_CUTandTAG/2.cutdata
 mkdir $nwd
 cd $wd
-for i in *R1.fq.gz; do
-t=${i/_1/_2}
+for i in *R1_*.fastq.gz; do 
+t=${i/_R1/_R2}
 echo $i
 echo $t
-nohup cutadapt -j 3 -a AGATCGGAAGAGC  -A AGATCGGAAGAGC --trim-n -m 80 -q 20,20 -o $nwd/${i%.fastq*}_cut.fq -p $nwd/${t%.fastq*}_cut.fq $i $t > $nwd/${i%%.*}_cut.log &
+nohup cutadapt -j 3 -a AGATCGGAAGAGC  -A AGATCGGAAGAGC --trim-n -m 25 -q 20,20 -o $nwd/${i%_S*}_R1.cut.fq -p $nwd/${t%_S*}_R2.cut.fq $i $t > $nwd/${i%%_*}.cut.log & 
 done
 
 cd $nwd
+mkdir log
+mv *log log/
+```
+
+#### 2ex1. rename files
+
+#### 2ex2. fastqc after cutadapt
+```sh
+wd=~/project/DUX/batch1_CUTandTAG/2.cutdata
+cd $wd
 mkdir fastqc
 for i in *fq ;do nohup fastqc $i -o ./fastqc & done
+
+multiqc -n 'batch1_H3K9me3_CUTandTAG_cutadapt' ./fastqc &
 ```
 
 ### 3. align
@@ -40,12 +52,12 @@ wd=~/project/DUX/batch1_CUTandTAG/2.cutdata
 nwd=~/project/DUX/batch1_CUTandTAG/3.align
 mkdir $nwd
 cd $wd
-for i in *_1_cut.fq
+for i in *.R1.cut.fq
 do
 echo $i
-t=${i/_1_cut.fq/_2_cut.fq}
+t=${i/R1.cut.fq/R2.cut.fq}
 echo $t
-nohup bowtie2 --end-to-end --very-sensitive --no-mixed --no-discordant --phred33 -I 10 -X 700 -p 8 -x ~/ref/bowtie_index/mm10 -1 $i -2 $t -S ${i%%_R1*}.bowtie2.sam & > ${i%%_R1*}.bowtie2.log
+nohup bowtie2 --end-to-end --very-sensitive --no-mixed --no-discordant --phred33 -I 10 -X 700 -p 8 -x ~/ref/bowtie_index/mm10 -1 $i -2 $t -S $nwd/${i%%R1*}.bowtie2.sam & > $nwd/${i%%R1*}.bowtie2.log
 done
 ```
 
