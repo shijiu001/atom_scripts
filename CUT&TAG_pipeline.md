@@ -1,9 +1,11 @@
 ### 0. enviroment
+
 ```sh
 conda activate chip
 ```
    
 ### 1. Fastqc
+
 ```sh
 wd=~/project/DUX/batch1_CUTandTAG/1.rawdata
 cd $wd
@@ -16,6 +18,7 @@ multiqc -n 'batch1_H3K9me3_CUTandTAG_raw' ./fastqc &
 ```
 
 ### 2. cutadapt
+
 ```sh
 wd=~/project/DUX/batch1_CUTandTAG/1.rawdata
 nwd=~/project/DUX/batch1_CUTandTAG/2.cutdata
@@ -36,6 +39,7 @@ mv *log log/
 #### 2ex1. rename files
 
 #### 2ex2. fastqc after cutadapt
+
 ```sh
 wd=~/project/DUX/batch1_CUTandTAG/2.cutdata
 cd $wd
@@ -57,7 +61,7 @@ do
 echo $i
 t=${i/R1.cut.fq/R2.cut.fq}
 echo $t
-nohup bowtie2 --end-to-end --very-sensitive --no-mixed --no-discordant --phred33 -I 10 -X 700 -p 8 -x ~/ref/bowtie_index/mm10 -1 $i -2 $t -S $nwd/${i%%R1*}.bowtie2.sam & > $nwd/${i%%R1*}.bowtie2.log
+nohup bowtie2 --end-to-end --very-sensitive --no-mixed --no-discordant --phred33 -I 10 -X 700 -p 8 -x ~/ref/bowtie_index/mm10 -1 $i -2 $t -S $nwd/${i%%.R1*}.bowtie2.sam > $nwd/${i%%.R1*}.bowtie2.log &
 done
 ```
 
@@ -72,43 +76,43 @@ echo $seqDepth >$projPath/alignment/sam/bowtie2_summary/${histName}_bowtie2_spik
 
 #### 3.3 alignment QC
 ```R
-## Path to the project and histone list
-projPath = "/fh/fast/gottardo_r/yezheng_working/cuttag/CUTTag_tutorial"
-sampleList = c("K27me3_rep1", "K27me3_rep2", "K4me3_rep1", "K4me3_rep2", "IgG_rep1", "IgG_rep2")
-histList = c("K27me3", "K4me3", "IgG")
-
 ## Collect the alignment results from the bowtie2 alignment summary files
+setwd("~/project/CUTandTAG_20230424/3.align")
+
+library(dplyr)
+library(magrittr)
+file_names <- list.files(pattern = 'log')
 alignResult = c()
-for(hist in sampleList){
-  alignRes = read.table(paste0(projPath, "/alignment/sam/bowtie2_summary/", hist, "_bowtie2.txt"), header = FALSE, fill = TRUE)
+for(file in file_names){
+  alignRes = read.table(file, header = FALSE, fill = TRUE)
   alignRate = substr(alignRes$V1[6], 1, nchar(as.character(alignRes$V1[6]))-1)
-  histInfo = strsplit(hist, "_")[[1]]
-  alignResult = data.frame(Histone = histInfo[1], Replicate = histInfo[2], 
+  Info = strsplit(file, c("_","."))[[1]]
+  alignResult = data.frame(Genotype = Info[1], Replicate = substr(Info[4],1,4), 
                            SequencingDepth = alignRes$V1[1] %>% as.character %>% as.numeric, 
-                           MappedFragNum_hg38 = alignRes$V1[4] %>% as.character %>% as.numeric + alignRes$V1[5] %>% as.character %>% as.numeric, 
-                           AlignmentRate_hg38 = alignRate %>% as.numeric)  %>% rbind(alignResult, .)
+                           MappedFragNum_mm10 = alignRes$V1[4] %>% as.character %>% as.numeric + alignRes$V1[5] %>% as.character %>% as.numeric, 
+                           AlignmentRate_mm10 = alignRate %>% as.numeric)  %>% rbind(alignResult, .)
 }
-alignResult$Histone = factor(alignResult$Histone, levels = histList)
-alignResult %>% mutate(AlignmentRate_hg38 = paste0(AlignmentRate_hg38, "%"))
+alignResult$Genotype = as.factor(alignResult$Genotype)
+alignResult %>% mutate(AlignmentRate_mm10 = paste0(AlignmentRate_mm10, "%"))
 
-##Spike-in
-spikeAlign = c()
-for(hist in sampleList){
-  spikeRes = read.table(paste0(projPath, "/alignment/sam/bowtie2_summary/", hist, "_bowtie2_spikeIn.txt"), header = FALSE, fill = TRUE)
-  alignRate = substr(spikeRes$V1[6], 1, nchar(as.character(spikeRes$V1[6]))-1)
-  histInfo = strsplit(hist, "_")[[1]]
-  spikeAlign = data.frame(Histone = histInfo[1], Replicate = histInfo[2], 
-                          SequencingDepth = spikeRes$V1[1] %>% as.character %>% as.numeric, 
-                          MappedFragNum_spikeIn = spikeRes$V1[4] %>% as.character %>% as.numeric + spikeRes$V1[5] %>% as.character %>% as.numeric, 
-                          AlignmentRate_spikeIn = alignRate %>% as.numeric)  %>% rbind(spikeAlign, .)
-}
-spikeAlign$Histone = factor(spikeAlign$Histone, levels = histList)
-spikeAlign %>% mutate(AlignmentRate_spikeIn = paste0(AlignmentRate_spikeIn, "%"))
+# ##Spike-in
+# spikeAlign = c()
+# for(hist in sampleList){
+#   spikeRes = read.table(paste0(projPath, "/alignment/sam/bowtie2_summary/", hist, "_bowtie2_spikeIn.txt"), header = FALSE, fill = TRUE)
+#   alignRate = substr(spikeRes$V1[6], 1, nchar(as.character(spikeRes$V1[6]))-1)
+#   histInfo = strsplit(hist, "_")[[1]]
+#   spikeAlign = data.frame(Histone = histInfo[1], Replicate = histInfo[2], 
+#                           SequencingDepth = spikeRes$V1[1] %>% as.character %>% as.numeric, 
+#                           MappedFragNum_spikeIn = spikeRes$V1[4] %>% as.character %>% as.numeric + spikeRes$V1[5] %>% as.character %>% as.numeric, 
+#                           AlignmentRate_spikeIn = alignRate %>% as.numeric)  %>% rbind(spikeAlign, .)
+# }
+# spikeAlign$Histone = factor(spikeAlign$Histone, levels = histList)
+# spikeAlign %>% mutate(AlignmentRate_spikeIn = paste0(AlignmentRate_spikeIn, "%"))
 
-alignSummary = left_join(alignResult, spikeAlign, by = c("Histone", "Replicate", "SequencingDepth")) %>%
-  mutate(AlignmentRate_hg38 = paste0(AlignmentRate_hg38, "%"), 
-         AlignmentRate_spikeIn = paste0(AlignmentRate_spikeIn, "%"))
-alignSummary
+# alignSummary = left_join(alignResult, spikeAlign, by = c("Histone", "Replicate", "SequencingDepth")) %>%
+#   mutate(AlignmentRate_hg38 = paste0(AlignmentRate_hg38, "%"), 
+#          AlignmentRate_spikeIn = paste0(AlignmentRate_spikeIn, "%"))
+# alignSummary
 
 ## Generate sequencing depth boxplot
 fig3A = alignResult %>% ggplot(aes(x = Histone, y = SequencingDepth/1000000, fill = Histone)) +
