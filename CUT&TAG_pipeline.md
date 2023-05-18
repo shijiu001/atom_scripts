@@ -1,9 +1,13 @@
+# CUT&TAG pipeline(coded during the first analysis of CUT&TAG data, 2023.5.17-2023.5.28)
+
+## WT and Dux-KO embryos at late 2-cell stage, targeting H3K9me3
+
 ### 0. enviroment
 
 ```sh
 conda activate chip
 ```
-   
+
 ### 1. Fastqc
 
 ```sh
@@ -50,7 +54,9 @@ multiqc -n 'batch1_H3K9me3_CUTandTAG_cutadapt' ./fastqc &
 ```
 
 ### 3. align
+
 #### 3.1 align to mm10
+
 ```sh
 wd=~/project/DUX/batch1_CUTandTAG/2.cutdata
 nwd=~/project/DUX/batch1_CUTandTAG/3.align
@@ -66,6 +72,7 @@ done
 ```
 
 #### 3.2 align to spike-in genome for spike-in calibration
+
 ```sh
 bowtie2 --end-to-end --very-sensitive --no-mixed --no-discordant --phred33 -I 10 -X 700 -p 8 -x ${spikeInRef} -1 ${projPath}/fastq/${histName}_R1.fastq.gz -2 ${projPath}/fastq/${histName}_R2.fastq.gz -S $projPath/alignment/sam/${histName}_bowtie2_spikeIn.sam & > $projPath/alignment/sam/bowtie2_summary/${histName}_bowtie2_spikeIn.log
 
@@ -75,6 +82,7 @@ echo $seqDepth >$projPath/alignment/sam/bowtie2_summary/${histName}_bowtie2_spik
 ```
 
 #### 3.3 alignment QC
+
 ```R
 ## Collect the alignment results from the bowtie2 alignment summary files
 setwd("~/project/CUTandTAG_20230424/3.align")
@@ -160,8 +168,8 @@ ggarrange(fig3A, fig3B, fig3C, fig3D, ncol = 2, nrow=2, common.legend = TRUE, le
 
 ```
 
-
 ### 4. remove dup
+
 ```sh
 ## depending on how you load picard and your server environment, the picardCMD can be different. Adjust accordingly.
 picardCMD="java -jar picard.jar"
