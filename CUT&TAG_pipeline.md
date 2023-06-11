@@ -123,47 +123,50 @@ alignResult %>% mutate(AlignmentRate_mm10 = paste0(AlignmentRate_mm10, "%"))
 # alignSummary
 
 ## Generate sequencing depth boxplot
-fig3A = alignResult %>% ggplot(aes(x = Histone, y = SequencingDepth/1000000, fill = Histone)) +
-    geom_boxplot() +
-    geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
-    scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
-    scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
-    theme_bw(base_size = 18) +
-    ylab("Sequencing Depth per Million") +
-    xlab("") + 
-    ggtitle("A. Sequencing Depth")
+library(ggplot2)
+library(viridis)
+# library(ggpubr) <which can only be quited for the failure of installing ggpubr>
+fig3A = alignResult %>% ggplot(aes(x = Genotype, y = SequencingDepth/1000000, fill = Genotype)) +
+  geom_boxplot() +
+  geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
+  scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
+  scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
+  theme_bw(base_size = 18) +
+  ylab("Sequencing Depth per Million") +
+  xlab("") + 
+  ggtitle("A. Sequencing Depth")
 
-fig3B = alignResult %>% ggplot(aes(x = Histone, y = MappedFragNum_hg38/1000000, fill = Histone)) +
-    geom_boxplot() +
-    geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
-    scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
-    scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
-    theme_bw(base_size = 18) +
-    ylab("Mapped Fragments per Million") +
-    xlab("") +
-    ggtitle("B. Alignable Fragment (hg38)")
+fig3B = alignResult %>% ggplot(aes(x = Genotype, y = MappedFragNum_mm10/1000000, fill = Genotype)) +
+  geom_boxplot() +
+  geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
+  scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
+  scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
+  theme_bw(base_size = 18) +
+  ylab("Mapped Fragments per Million") +
+  xlab("") +
+  ggtitle("B. Alignable Fragment (mm10)")
 
-fig3C = alignResult %>% ggplot(aes(x = Histone, y = AlignmentRate_hg38, fill = Histone)) +
-    geom_boxplot() +
-    geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
-    scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
-    scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
-    theme_bw(base_size = 18) +
-    ylab("% of Mapped Fragments") +
-    xlab("") +
-    ggtitle("C. Alignment Rate (hg38)")
+fig3C = alignResult %>% ggplot(aes(x = Genotype, y = AlignmentRate_mm10, fill = Genotype)) +
+  geom_boxplot() +
+  geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
+  scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
+  scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
+  theme_bw(base_size = 18) +
+  ylab("% of Mapped Fragments") +
+  xlab("") +
+  ggtitle("C. Alignment Rate (mm10)")
 
-fig3D = spikeAlign %>% ggplot(aes(x = Histone, y = AlignmentRate_spikeIn, fill = Histone)) +
-    geom_boxplot() +
-    geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
-    scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
-    scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
-    theme_bw(base_size = 18) +
-    ylab("Spike-in Alignment Rate") +
-    xlab("") +
-    ggtitle("D. Alignment Rate (E.coli)")
+# fig3D = spikeAlign %>% ggplot(aes(x = Histone, y = AlignmentRate_spikeIn, fill = Histone)) +
+#     geom_boxplot() +
+#     geom_jitter(aes(color = Replicate), position = position_jitter(0.15)) +
+#     scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
+#     scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
+#     theme_bw(base_size = 18) +
+#     ylab("Spike-in Alignment Rate") +
+#     xlab("") +
+#     ggtitle("D. Alignment Rate (E.coli)")
 
-ggarrange(fig3A, fig3B, fig3C, fig3D, ncol = 2, nrow=2, common.legend = TRUE, legend="bottom")
+# ggarrange(fig3A, fig3B, fig3C, fig3D, ncol = 2, nrow=2, common.legend = TRUE, legend="bottom") <which can only be quited for the failure of installing ggpubr>
 
 
 ```
@@ -171,12 +174,12 @@ ggarrange(fig3A, fig3B, fig3C, fig3D, ncol = 2, nrow=2, common.legend = TRUE, le
 ### 4. remove dup
 
 ```sh
-## depending on how you load picard and your server environment, the picardCMD can be different. Adjust accordingly.
-picardCMD="java -jar picard.jar"
-mkdir -p $projPath/alignment/removeDuplicate/picard_summary
-
 ## Sort by coordinate
-$picardCMD SortSam I=$projPath/alignment/sam/${histName}_bowtie2.sam O=$projPath/alignment/sam/${histName}_bowtie2.sorted.sam SORT_ORDER=coordinate
+for i in *bowtie2.sam; do
+t=${i%%..bowtie2.sam}_bowtie2.sorted.sam
+echo $i $t
+nohup picard SortSam I=$i O=$t SORT_ORDER=coordinate &
+done
 
 ## mark duplicates
 $picardCMD MarkDuplicates I=$projPath/alignment/sam/${histName}_bowtie2.sorted.sam O=$projPath/alignment/removeDuplicate/${histName}_bowtie2.sorted.dupMarked.sam METRICS_FILE=$projPath/alignment/removeDuplicate/picard_summary/${histName}_picard.dupMark.txt

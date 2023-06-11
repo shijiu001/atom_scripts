@@ -1,0 +1,118 @@
+# Pipeline for mirin treated embryos
+
+## take IVF embryos for instant
+
+### 1.Fastqc
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/1.rawdata
+cd $wd
+mkdir fastqc
+for i in *fastq.gz; do
+nohup fastqc $i -o ./fastqc &
+done
+
+cd ./fastqc/
+multiqc -n 'IVF_mirin_raw' ./ &
+```
+
+### 2.Cutadapt
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/1.rawdata
+nwd=~/project/DNAdamage/Mirin/IVF/2.cutdata
+mkdir $nwd
+for i in *R1*.fastq.gz; do
+t=${i/R1/R2}
+echo $i
+echo $t
+nohup cutadapt -j 3 -a AGATCGGAAGAGC  -A AGATCGGAAGAGC --trim-n -m 80 -q 20,20 -o $nwd/${i%_S*}_R1.cut.fq -p $nwd/${t%_S*}_R2.cut.fq $i $t > $nwd/${i%%_*}.cut.log &
+done
+```
+
+### 2ex1. Rename files
+> sample_info.txt  
+> sample_name     sample_type     experiment      treatment       time    stage repeat
+> WMZ-0404-1      Total-RNAseq    IVF     ctrl    5hpf    PN3   rep1
+> WMZ-0404-2      Total-RNAseq    IVF     ctrl    5hpf    PN3   rep2
+> WMZ-0404-3      Total-RNAseq    IVF     ctrl    10hpf   PN5   rep1
+> WMZ-0404-4      Total-RNAseq    IVF     ctrl    10hpf   PN5   rep2
+> WMZ-0404-5      Total-RNAseq    IVF     mirin   10hpf   PN5   rep1
+> ......
+
+```sh
+awk 'NR>1 {k=$1; i=$3"-"$4"-"$5"-"$6"-"$7; a=i"_R1.cut.fq"; b=i"_R2.cut.fq"; c=k"_R1.cut.fq"; d=k"_R2.cut.fq"; print c,a; print d,b }' ../1.rawdata/sample_info.txt | xargs -n2 mv
+```
+
+### 2ex2. Fastqc after cutadapt
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/2.cutdata
+cd $wd
+mkdir fastqc
+for i in *cut.fq; do
+nohup fastqc $i -o ./fastqc &
+done
+
+cd ./fastqc/
+multiqc -n 'IVF_mirin_cut' ./ &
+```
+
+### 3.align
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/2.cutdata
+nwd=~/project/DNAdamage/Mirin/IVF/3.align
+mkdir $nwd
+cd $wd
+for i in *R1.cut.fq
+do
+echo $i
+t=${i/R1.cut.fq/R2.cut.fq}
+echo $t
+nohup hisat2 -p 5 --dta-cufflinks --no-discordant  -t -x ~/ref/hisat2_index/mm10/genome -1 $i -2 $t -S $nwd/${i%%.*}.sam  > $nwd/${i%%.*}.log &
+echo ${i%%.*}.sam
+done
+```
+
+### 3ex1.flagstat
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/3.align
+cd $wd
+mkdir flagstat
+for i in *.sam; do
+echo $i
+nohup samtools flagstat -@ 4 $i > ./flagstat/${i/.sam/.flagstat} &
+done
+```
+
+### 4.sam2bam
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/3.align
+cd $wd
+for i in *sam
+do
+nohup samtools sort -@ 4 -o ${i%.*}.sorted.bam $i &
+done
+
+nwd=~/project/DNAdamage/Mirin/IVF/4.proper
+mkdir $nwd
+for i in *sorted.bam
+do
+nohup samtools view -bf 0x2 -q 20 -@ 4 $i -o $nwd/${i%sort*}proper.bam  &
+done
+```
+
+### 5.stringtie
+
+```sh
+wd=~/project/DNAdamage/Mirin/IVF/4.proper
+nwd=~/project/DNAdamage/Mirin/IVF/5.stringtie
+cd $wd
+for i in *proper.bam; do
+outfolder=${i%.proper*}
+mkdir -p $nwd/$outfolder
+nohup stringtie -p 8 $i -b $nwd/$outfolder -e -G /home1/share/gtf/mm10.gtf -o $nwd/$outfolder/$outfolder_stringtie.gtf > $nwd/$outfolder.log &
+done
