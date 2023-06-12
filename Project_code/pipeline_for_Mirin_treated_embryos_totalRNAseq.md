@@ -114,5 +114,5 @@ cd $wd
 for i in *proper.bam; do
 outfolder=${i%.proper*}
 mkdir -p $nwd/$outfolder
-nohup stringtie -p 8 $i -b $nwd/$outfolder -e -G /home1/share/gtf/mm10.gtf -o $nwd/$outfolder/$outfolder_stringtie.gtf > $nwd/$outfolder.log &
+nohup stringtie -p 8 $i -b $nwd/$outfolder -e -G ~/ref/gtf/mm10.gtf -o $nwd/$outfolder/$outfolder_stringtie.gtf > $nwd/$outfolder.log &
 done
