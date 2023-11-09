@@ -1,0 +1,62 @@
+###ChIP-seq_workflow
+
+#qc   
+##fastqc
+ls *fastq.gz|while read id;do fastqc -t 20 $id -o /path_to_outdir;done      必须要输出 -o 
+
+##trim & trimmed_qc
+ls *R1.fastq.gz > 1                      
+ls *R2.fastq.gz > 2
+paste 1 2 > config
+rm 1 2
+cat config|while read id;do arr=($id);fq1=${arr[0]};fq2=${arr[1]};echo $fq1 $fq2;trim_galore --trim-n --length 75 -q 25 --fastqc --paired $fq1 $fq2 -o /path_to_outdir;done
+对拿到的val格式文件执行fastqc   ~/annotation/genome/mm10_2/mm10.fa
+#align
+##mapping-bwa mem
+ls *1_val_1.fq.gz > 1    
+ls *2_val_2.fq.gz > 2
+paste 1 2 > config
+rm 1 2
+cat config|while read id;do arr=(${id});fq1=${arr[0]};fq2=${arr[1]};echo $fq1 $fq2; database/mm10/bwa-index/mm10.fa $fq1 $fq2 > /path_to_outdir/$(basename $fq1 "_1_val_1.fq.gz").sam;done       
+arr=(${id})去读取每一行  fq1=${arr[0]}读取每行的第一列   fq2=${arr[1]}读取每行的第二列          ~/annotation/mm10_1/bwa-index/mm10.fa          /$(basename $fq1 "_1_val_1.fq.gz")文件名
+##flagstat-mapped
+ls *sam|while read id;do samtools flagstat $id > /path_to_outdir/$(basename $id "sam")map.flag.txt;done   ******
+
+##filter_mapped&mapQ30_&_sam2bam
+ls *sam|while read id;do samtools view -Shb -@ 10 -F 12 -q 30 $id > /path_to_outdir/$(basename $id "sam")mapQ30.bam;done 
+
+##flagstat-mapQ30
+ls *mapQ30.bam|while read id;do samtools flagstat $id > /path_to_outdir/$(basename $id "bam").flag.txt;done
+
+##sort_bam
+ls *mapQ30.bam|while read id;do samtools sort -@ 10 $id > $(basename $id "bam")sort.bam;done
+
+##remove_duplicates('picard.jar' needs sorted bam file)
+ls *sort.bam|while read id;do java -jar ~/software/picard.jar MarkDuplicates I=$id O=./$(basename $id "sort.bam")undup.bam M=./$(basename $id "sort.bam")matrics.txt REMOVE_DUPLICATES=TRUE;done
+这里的O不是指输出
+##flagstat-undup
+ls *undup.bam|while read id;do samtools flagstat $id > /path_to_outdir/$(basename $id "bam")flag.txt;done
+
+##index
+ls *undup.bam|while read id;do samtools index $id;done
+eg. samtools index LYD0319_3_L1_361X61.sort.bam.dump.bam
+#check correlation
+##bamCoverage
+ls *undup.bam|while read id;do bamCoverage -b $id -o /path_to_outdir/$(basename $id "mapQ30.undup.bam")50bp-bin.bw --normalizeUsing RPKM -p 10 -bs 50 --smoothLength 150 > /path_to_outdir/$(basename $id "mapQ30.undup.bam")50bp-bin.log 2>&1;done
+
+##correlation_in_TSS
+multiBigwigSummary BED-file --BED ~/database/mm10/mm10_tss_2000-2000.bed -b *bw -out tss-cor.npz -p 10 --chromosomesToSkip chrY --outRawCounts tss-cor.tab      
+plotCorrelation -in tss-cor.npz -o tss-cor.heatmap.pdf -p heatmap -c pearson --plotNumbers -T "Correlation"
+
+##correlation_in_1kb-bin
+multiBigwigSummary bins -b *bw -p 10 -bs 1000 --chromosomesToSkip chrY -out 1kb-cor.npz --outRawCounts 1kb-cor.tabs
+plotCorrelation -in 1kb-cor.npz -o 1kb-cor.heatmap.pdf -p heatmap -c pearson --plotNumbers -T "1kb correlation"
+
+#mergeBam
+samtools merge -@ 10 /path_to_outdir/out.merge.bam file1.bam file2.bam
+
+#merged bam index
+ls *merge.bam|while read id;do samtools index $id;done
+
+#bamCompare-log2ratio(50bp-bin for igv)
+cat config|while read id;do arr=($id);treat=${arr[0]};input=${arr[1]};echo $treat $input;bamCompare -b1 $treat -b2 $input -p 10 -bs 50 --smoothLength 150 --normalizeUsing RPKM --operation log2 -o /path_to_outdir/$(basename $treat "bam")50bp.bw > /path_to_outdir/$(basename $treat "bam")50bp.log 2>&1;done

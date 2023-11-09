@@ -31,6 +31,7 @@ done
 ```
 
 ### 2ex1. Rename files
+
 > sample_info.txt  
 > sample_name     sample_type     experiment      treatment       time    stage repeat
 > WMZ-0404-1      Total-RNAseq    IVF     ctrl    5hpf    PN3   rep1
@@ -116,3 +117,35 @@ outfolder=${i%.proper*}
 mkdir -p $nwd/$outfolder
 nohup stringtie -p 8 $i -b $nwd/$outfolder -e -G ~/ref/gtf/mm10.gtf -o $nwd/$outfolder/$outfolder_stringtie.gtf > $nwd/$outfolder.log &
 done
+```
+
+### 6.TEtranscripts
+
+```sh
+STAR --runThreadN 20 --runMode genomeGenerate --genomeDir ~/ref/STAR_index --genomeFastaFiles ~/ref/genome_fasta/mm10/mm10.fa --sjdbGTFfile ~/ref/gtf/mm10.gtf --sjdbOverhang 149
+```
+
+```sh
+nwd=~/project/DNAdamage/Mirin/IVF/6.TEtranscripts/6.3.align_STAR
+mkdir -p $nwd
+wd=~/project/DNAdamage/Mirin/IVF/2.cutdata
+cd $wd
+
+for i in *10hpf*R1.cut.fq; do
+t=${i/R1/R2};
+pf=${i%%_R*};
+nohup STAR --runThreadN 6 --genomeDir ~/ref/STAR_index --readFilesIn ${i} ${t} --outSAMtype BAM SortedByCoordinate --outFileNamePrefix $nwd/${pf} --outFilterMultimapNmax 100 --winAnchorMultimapNmax 100 &
+done
+```
+
+
+### 7.RRR
+```sh
+wd=~/project/DNAdamage/Mirin/partheno/4.proper
+cd $wd
+nwd=~/project/DNAdamage/Mirin/partheno/7.RRR/7.5.featurecount_RRR
+mkdir $nwd
+
+nohup featureCounts -T 8 -F GTF -p -t CDS -g gene_id -a ~/project/NT/2C/ref_publised_data/RRR_region/whole_rrr_class_mm10_lftover_tran.gtf -o $nwd/partheno_RRRregion_counts.txt *bam &
+
+nohup featureCounts -T 8 -F GTF -p -t CDS -g gene_id -a ~/ref/gtf/mm10.gtf -o $nwd/partheno_allgene_counts.txt *bam &

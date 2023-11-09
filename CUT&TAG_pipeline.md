@@ -182,10 +182,105 @@ nohup picard SortSam I=$i O=$t SORT_ORDER=coordinate &
 done
 
 ## mark duplicates
-$picardCMD MarkDuplicates I=$projPath/alignment/sam/${histName}_bowtie2.sorted.sam O=$projPath/alignment/removeDuplicate/${histName}_bowtie2.sorted.dupMarked.sam METRICS_FILE=$projPath/alignment/removeDuplicate/picard_summary/${histName}_picard.dupMark.txt
+picard MarkDuplicates -I WT_l2C_H3K9me3_rep1_bowtie2.sorted.sam -O WT_l2C_H3K9me3_rep1_bowtie2.DupMarked.sam -METRICS_FILE WT_l2C_H3K9me3_rep1_picard.DupMark.txt
 
 ## remove duplicates
 picardCMD MarkDuplicates I=$projPath/alignment/sam/${histName}_bowtie2.sorted.sam O=$projPath/alignment/removeDuplicate/${histName}_bowtie2.sorted.rmDup.sam REMOVE_DUPLICATES=true METRICS_FILE=$projPath/alignment/removeDuplicate/picard_summary/${histName}_picard.rmDup.txt
+
+for i in *sorted.sam; do
+nohup picard MarkDuplicates -I $i -O ${i/sorted/rmDup} --REMOVE_DUPLICATES true -METRICS_FILE ${i/bowtie2.sorted.sam/picard.rmDup.txt} &
+done
 ```
 
 ### 5. mapped fragment size distribution
+
+```sh
+wd=~/project/2C_related/Dux/CUTandTAG_20230424/3.align
+mkdir fragmentLen
+
+for i in *sam; do
+samtools view -F 0x04 $i | awk -F '\t' 'function abs(x){return ((x < 0.0) ? -x : x)} {print abs($9)}' | sort | uniq -c | awk -v OFS="\t" '{print $2, $1/2}' > ${i%.bowtie2.sam}.fragmentLen.txt
+done
+```
+
+```R
+setwd("~/project/2C_related/Dux/CUTandTAG_20230424/3.align")
+file_names <- list.files(pattern = 'fragmentLen.txt')
+fragLen = c()
+for(file in file_names){
+  Info = strsplit(file, c("_","."))[[1]]
+  fragLen = read.table(file, header = FALSE) %>% mutate(fragLen = V1 %>% as.numeric, fragCount = V2 %>% as.numeric, Weight = as.numeric(V2)/sum(as.numeric(V2)), Genotype = Info[1], Histone = Info[3], Sample = paste(Info[1],gsub('.fragmentLen.txt','',Info[4],),sep = '-')) %>% rbind(fragLen, .)
+}
+fragLen$Genotype = factor(fragLen$Genotype)
+fragLen$Histone = factor(fragLen$Histone)
+fragLen$Sample = factor(fragLen$Sample)
+
+fig5A = fragLen %>% ggplot(aes(x = Sample, y = fragLen, weight = Weight, fill = Genotype)) +
+  geom_violin(bw = 5) +
+  scale_y_continuous(breaks = seq(0, 800, 50)) +
+  scale_fill_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma", alpha = 0.8) +
+  scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9) +
+  theme_bw(base_size = 20) +
+  # ggpubr::rotate_x_text(angle = 20) +
+  ylab("Fragment Length") +
+  xlab("")
+
+fig5B = fragLen %>% ggplot(aes(x = fragLen, y = fragCount, color = Genotype, group = Sample)) +
+  geom_line(size = 1) +
+  scale_color_viridis(discrete = TRUE, begin = 0.1, end = 0.9, option = "magma") +
+  theme_bw(base_size = 20) +
+  xlab("Fragment Length") +
+  ylab("Count") +
+  coord_cartesian(xlim = c(0, 500))
+
+# ggarrange(fig5A, fig5B, ncol = 2)
+```
+
+### 6. Filtering mapped reads by the mapping quality filtering
+
+```sh
+wd=~/project/2C_related/Dux/CUTandTAG_20230424/4.markdup/rmDup
+cd $wd
+
+for i in *sam; do
+nohup samtools view -h -q 2 $i > ${i/sam/qualityScore2.sam} &
+done
+```
+
+### 7. File format conversion
+
+```sh
+wd=~/project/2C_related/Dux/CUTandTAG_20230424/4.markdup/rmDup
+cd $wd
+
+# Filter and keep the mapped read pairs
+for i in *qualityScore2.sam; do 
+nohup samtools view -bS -F 0x04 $i > ${i/sam/bam} &
+done
+
+# Convert into bed file format
+for i in *qualityScore2.bam; do
+nohup bedtools bamtobed -i $i -bedpe > ${i%.*}.bed &
+done 
+
+## Keep the read pairs that are on the same chromosome and fragment length less than 1000bp.
+for i in *bed; do
+awk '$1==$4 && $6-$2 < 5000 {print $0}' $i > ${i/bed/clean.bed};
+done
+
+## Only extract the fragment related columns
+for i in *clean.bed; do
+cut -f 1,2,6 $i | sort -k1,1 -k2,2n -k3,3n  > ${i%.*}.fragments.bed;
+done
+
+for i in *fragments.bed; do
+nohup bedtools genomecov -bg -i $i -g ~/ref/genome_fasta/mm10/mm10.chrom.size > ${i/bed/bedgraph} &
+done
+```
+
+### 8. call peak
+```sh
+for i in *bedgraph; do
+bash ~/miniconda3/envs/chip/bin/SEACR_1.3.sh $i 0.05 norm relaxed ${i%%.*}.SEACR.peaks;
+done
+```
