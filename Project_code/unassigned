@@ -1,0 +1,10 @@
+macs3 bdgdiff --t1 ctrl-PN3-H3K4me3-rep1_treat_pileup.bdg --c1 ctrl-PN3-H3K4me3-rep1_control_lambda.bdg --t2 ctrl-e2C-H3K4me3-rep1_treat_pileup.bdg --c2 ctrl-e2C-H3K4me3-rep1_control_lambda.bdg -C 2 -g 200 --d1 17 --d2 22 --outdir ./macs3_bdgdiff/ --o-prefix ctrl_PN3-vs-e2C
+
+awk 'NR>1 {a=$1; c=int($2*0.5+$3*0.5); d=c+1; print a,'\t',c,'\t',d}' ctrl_e2C-vs-DRB_e2C_c2.0_common.bed > ctrl_e2C-vs-DRB_e2C_c2.0_common_summit.bed
+
+computeMatrix reference-point --referencePoint center -b 1500 -a 1500 -S ctrl-PN3-H3K4me3-rep1.bw ctrl-e2C-H3K4me3-rep1.bw DRB-e2C-H3K4me3-rep1.bw -R site_resource/ctrl_PN3-vs-e2C_c2.0_cond1_summit_filted.bed --skipZeros -o ComputeMatrix/matrix_ctrl_PN3-vs-e2C_PN3-unique.gz
+plotHeatmap -m matrix_ctrl_PN3-vs-e2C_e2C-unique_withPOL2.gz -o ctrl_PN3-vs-e2C_e2C-unique_withPOL2.png --zMax 15 --whatToShow 'plot, heatmap and colorbar' --sortUsingSample 2 --outFileSortedRegions ctrl_PN3-vs-e2C_e2C-unique_withPOL2.bed
+
+computeMatrix reference-point --referencePoint center -b 1500 -a 1500 -S ctrl-PN3-H3K4me3-rep1.bw ctrl-e2C-H3K4me3-rep1.bw DRB-e2C-H3K4me3-rep1.bw -R ../6.peaks/macs3_bdgdiff/ctrl_PN3-vs-e2C_c2.0_cond2_summit.bed --skipZeros -o test.gz
+plotHeatmap -m test.gz -o test.png --zMax 20 --kmeans 3 --clusterUsingSamples 3 --whatToShow 'plot, heatmap and colorbar' --outFileSortedRegions test.bed
+grep -v 'cluster_1' test.bed | cut -f 1-3 > ctrl_e2C-vs-DRB_e2C_c2.0_cond2_summit_filter.bed

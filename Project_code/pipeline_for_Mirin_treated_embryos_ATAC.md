@@ -16,6 +16,23 @@ mkdir $nwd
 find $wd -name '*gz' | xargs -i mv {} $nwd
 ```
 
+### 0ex1.seq combine
+
+```sh
+
+wd1=~/project/2C_related/Otx1/20240103_ATAC/1.rawdata/seqbatch1/1.rawdata
+wd2=~/project/2C_related/Otx1/20240103_ATAC/1.rawdata/seqbatch2/1.rawdata
+nwd=~/project/2C_related/Otx1/20240103_ATAC/1.rawdata/seq_combined
+cd $wd1
+
+for i in *R1*fastq.gz; do
+t=${i%%_*}; echo $t; 
+cat ${wd1}/${t}*R1*fastq.gz ${wd2}/${t}*R1*fastq.gz > ${nwd}/${t}_R1.fastq.gz; 
+cat ${wd1}/${t}*R2*fastq.gz ${wd2}/${t}*R2*fastq.gz > ${nwd}/${t}_R2.fastq.gz; 
+done
+
+```
+
 ### 1.Fastqc
 
 ```sh
@@ -27,7 +44,7 @@ nohup fastqc $i -o ./fastqc &
 done
 
 cd ./fastqc/
-multiqc -n 'IVF_mirin_ATAC_raw' ./ &
+multiqc -n 'rawdata' ./ &
 ```
 
 ### 2.cutadapt
@@ -67,7 +84,7 @@ nohup fastqc $i -o ./fastqc &
 done
 
 cd ./fastqc/
-multiqc -n 'IVF_mirin_ATAC_cut' ./ &
+multiqc -n 'cutdata' ./ &
 ```
 
 ### 3.align
@@ -144,12 +161,48 @@ nohup sambamba markdup -t 4 -r $i ${i/bam/rmdup.bam} &
 done
 ```
 
-### 6.
-for i in *rmdup.bam; do alignmentSieve -b $i -o ${i/bam/.shift.bam} -p 8 --ATACshift; done
+### 6.ATAC_shift
 
-for i in *bam; do nohup samtools sort -@ 8 -o ${i%.*}.sorted.bam $i & done
-for i in *bam; do samtools index $i; done
-for i in *sorted.bam; do bamCoverage -p 8 --normalizeUsing RPKM -b $i -o ${i%%.*}.bw; done
+```sh
+nwd=~/project/DNAdamage/Mirin/IVF/ATAC_20230720/5.ATAC_shift
+mkdir $nwd
+
+for i in *rmdup.bam; do 
+alignmentSieve -b $i -o ${nwd}/${i/.bam/.shift.bam} -p 8 --ATACshift
+done
+
+for i in *bam; do 
+nohup samtools sort -@ 8 -o ${i%.*}.sorted.bam $i &
+done
+
+for i in *shift.sorted.bam; do samtools index $i; done
+```
+
+### 7.bigwig
+
+```sh
+nwd=~/project/DNAdamage/Mirin/IVF/ATAC_20230720/6.bigwig
+mkidr $nwd
+
+for i in *sorted.bam; do 
+bamCoverage -p 8 --normalizeUsing RPKM -b $i -o ${nwd}/${i%%.*}.bw
+done
+```
+
+### 8.call peaks
+
+```sh
+nwd=~/project/DNAdamage/Mirin/IVF/ATAC_20230720/7.peaks
+for i in *.bam; do 
+nohup macs3 callpeak -t $i -f BAMPE -g mm -n ${i%%.*} -B -q 0.001 --keep-dup 1 --outdir $nwd & 
+done
+```
+
+### 9.DiffBind
+
+```sh
+macs3 bdgdiff --t1 ctrl-PN3-H3K4me3-rep1_treat_pileup.bdg --c1 ctrl-PN3-H3K4me3-rep1_control_lambda.bdg --t2 ctrl-e2C-H3K4me3-rep1_treat_pileup.bdg --c2 ctrl-e2C-H3K4me3-rep1_control_lambda.bdg -C 2 -g 200 --d1 17 --d2 22 --outdir ./macs3_bdgdiff/ --o-prefix ctrl_PN3-vs-e2C
+```
 
 computeMatrix scale-regions -b 3000 -a 3000 -S IVF-ctrl-22hpf-e2C-rep1.bw IVF-ctrl-22hpf-e2C-rep2.bw IVF-mirin-22hpf-e2C-rep1.bw IVF-mirin-22hpf-e2C-rep2.bw -R ~/project/DNAdamage/Mirin/resource_set/zga_genelist_position.bed --regionBodyLength 6000 --skipZeros -o matrix_zgagene_ATAC.gz
 
@@ -163,3 +216,5 @@ computeMatrix scale-regions -S IVF-ctrl-22hpf-e2C-rep1.bw IVF-ctrl-22hpf-e2C-rep
 
  computeMatrix reference-point --referencePoint center -b 3000 -a 3000 -S IVF-ctrl-22hpf-e2C-rep1.bw IVF-ctrl-22hpf-e2C-rep2.bw IVF-mirin-22hpf-e2C-rep1.bw IVF-mirin-22hpf-e2C-rep2.bw -R ~/project/DNAdamage/Mirin/IVF/Pol2_XieWei/resorce_data/Pol2_bindsite_1Cspecific.bed ~/project/DNAdamage/Mirin/IVF/Pol2_XieWei/resorce_data/Pol2_bindsite_l2Cspecific.bed ~/project/DNAdamage/Mirin/IVF/Pol2_XieWei/resorce_data/Pol2_bindsite_shared.bed --regionBodyLength 5000 --skipZeros --sortRegions keep -o matrix_Pol2_bindsite.gz
  1023  plotHeatmap -m matrix_Pol2_bindsite.gz -o Pol2_bindsite.png --zMax 5 --whatToShow 'plot, heatmap and colorbar'
+
+ findMotifsGenome.pl WT_enrich.HomerInput.txt mm10 ~/project/2C_related/Dux/ATAC_20230720/8.motif_homer/ -size 300 -p 10

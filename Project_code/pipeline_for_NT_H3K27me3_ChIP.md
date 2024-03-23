@@ -36,3 +36,8 @@ for i in FQZ-1029-[12]_*.bam; do nohup macs2 callpeak -t $i -c FQZ-1029-3_S50_L0
 
 
 for i in WMZ-1022-1[056]_*R1.cut.fq; do t=${i/R1.cut.fq/R2.cut.fq}; y=${i/R1.cut.fq/pwk-Nmasked.sam}; echo $i,$t $y; nohup bowtie2 -p 8 -x ~/ref/snp_mouse/PWK/PWK_PhJ_N-masked/bowtie2_index/GRCm38_PWK_PhJ_N-masked -1 $i -2 $t -S $y & done
+
+
+awk -F "\t" 'BEGIN {OFS="\t"}  {print "POL2_ctrl_e2C_B1target_slop200_"NR,$1,$2,$3,"."}' POL2_ctrl_e2C_B1target_slop200.bed > POL2_ctrl_e2C_B1target_slop200.HomerInput.txt
+
+nohup findMotifsGenome.pl POL2_ctrl_e2C_B1target_slop200.HomerInput.txt mm10 ./B1_target_motif/ -size 300 -p 10 &

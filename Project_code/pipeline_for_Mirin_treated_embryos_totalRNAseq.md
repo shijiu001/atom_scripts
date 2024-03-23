@@ -56,7 +56,7 @@ nohup fastqc $i -o ./fastqc &
 done
 
 cd ./fastqc/
-multiqc -n 'IVF_mirin_cut' ./ &
+multiqc -n 'cutdata' ./ &
 ```
 
 ### 3.align
@@ -133,9 +133,13 @@ cd $wd
 
 for i in *10hpf*R1.cut.fq; do
 t=${i/R1/R2};
-pf=${i%%_R*};
+pf=${i%%_R*}.;
 nohup STAR --runThreadN 6 --genomeDir ~/ref/STAR_index --readFilesIn ${i} ${t} --outSAMtype BAM SortedByCoordinate --outFileNamePrefix $nwd/${pf} --outFilterMultimapNmax 100 --winAnchorMultimapNmax 100 &
 done
+```
+
+```sh
+nohup TEtranscripts -t siSycp3-l2C-rep1.Aligned.sortedByCoord.out.bam  siSycp3-l2C-rep2.Aligned.sortedByCoord.out.bam -c ctrl-l2C-rep1.Aligned.sortedByCoord.out.bam  ctrl-l2C-rep2.Aligned.sortedByCoord.out.bam --GTF ~/ref/gtf/mm10.gtf --TE ~/ref/gtf/mm10_rmsk_TE.gtf --sortByPos &
 ```
 
 
